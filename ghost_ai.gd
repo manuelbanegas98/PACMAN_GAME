@@ -63,7 +63,7 @@ func catch_ghost() -> void:
 	route_clock = 0.0
 
 
-func update_brain(delta: float, maze, player_tile: Vector2i, player_direction: Vector2i, level: int) -> void:
+func update_brain(delta: float, maze, player_tile: Vector2i, player_direction: Vector2i, level: int, aggression_mod := 0.0) -> void:
 	if ai_state == FRIGHTENED:
 		state_clock -= delta
 		if state_clock <= 0.0:
@@ -91,11 +91,11 @@ func update_brain(delta: float, maze, player_tile: Vector2i, player_direction: V
 
 	route_clock -= delta
 	if route_clock <= 0.0 or (progress <= 0.001 and route.is_empty()):
-		_recalculate_route(maze, player_tile, player_direction, level)
+		_recalculate_route(maze, player_tile, player_direction, level, aggression_mod)
 	if route.size() > 1:
 		queue_direction(route[1] - tile)
 
-	var speed := ghost_speed + minf(float(level - 1), 10.0) * 5.0
+	var speed := ghost_speed + minf(float(level - 1), 10.0) * 5.0 + aggression_mod * 70.0
 	if ai_state == FRIGHTENED:
 		speed *= 0.76
 	elif ai_state == RETURN:
@@ -115,7 +115,7 @@ func update_brain(delta: float, maze, player_tile: Vector2i, player_direction: V
 			route_clock = 0.0
 
 
-func _recalculate_route(maze, player_tile: Vector2i, player_direction: Vector2i, level: int) -> void:
+func _recalculate_route(maze, player_tile: Vector2i, player_direction: Vector2i, level: int, aggression_mod: float = 0.0) -> void:
 	var target := player_tile
 	if ai_state == RETURN:
 		target = home_tile
@@ -124,17 +124,17 @@ func _recalculate_route(maze, player_tile: Vector2i, player_direction: Vector2i,
 	elif ai_state == FRIGHTENED:
 		target = _escape_target(maze, player_tile)
 	else:
-		var ambush_chance := clampf(aggression + float(level - 1) * 0.025, 0.0, 0.82)
+		var ambush_chance := clampf(aggression + float(level - 1) * 0.025 + aggression_mod, 0.0, 0.82)
 		if ai_state != RESUME and player_direction != Vector2i.ZERO and randf() < ambush_chance:
 			_set_state(AMBUSH)
-			target = _predicted_tile(maze, player_tile, player_direction, level)
+			target = _predicted_tile(maze, player_tile, player_direction, level, aggression_mod)
 		elif ai_state != RESUME:
 			_set_state(CHASE)
 			target = player_tile
 		else:
 			target = player_tile
 
-	var mistake_chance := maxf(0.035, randomness / (1.0 + float(level - 1) * 0.35))
+	var mistake_chance := maxf(0.02, randomness / (1.0 + float(level - 1) * 0.35) - aggression_mod)
 	if ai_state == CHASE and randf() < mistake_chance:
 		var exits: Array[Vector2i] = maze.open_neighbors(tile)
 		if exits.size() > 1:
@@ -146,8 +146,8 @@ func _recalculate_route(maze, player_tile: Vector2i, player_direction: Vector2i,
 	route_clock = maxf(0.16, path_recalculation_interval - float(level - 1) * 0.022)
 
 
-func _predicted_tile(maze, player_tile: Vector2i, player_direction: Vector2i, level: int) -> Vector2i:
-	var requested := clampi(roundi(prediction_distance + float(level - 1) * 0.22), 1, 5)
+func _predicted_tile(maze, player_tile: Vector2i, player_direction: Vector2i, level: int, aggression_mod: float = 0.0) -> Vector2i:
+	var requested := clampi(roundi(prediction_distance + float(level - 1) * 0.22 + aggression_mod * 5.0), 1, 5)
 	prediction_tiles = requested
 	var predicted := player_tile
 	for _step in range(requested):

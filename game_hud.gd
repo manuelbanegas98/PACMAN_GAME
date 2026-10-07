@@ -33,7 +33,7 @@ func _ready() -> void:
 	debug_label.visible = false
 
 
-func update_status(score: int, lives: int, level: int, remaining: int, power_seconds: float, ai_state: StringName, target_name: String, path_length: int, prediction: int, difficulty: float) -> void:
+func update_status(score: int, lives: int, level: int, remaining: int, power_seconds: float, ai_state: StringName, target_name: String, path_length: int, prediction: int, difficulty: float, adaptive: float = 0.0) -> void:
 	score_label.text = "SCORE  %05d" % score
 	lives_label.text = "LIVES  %d" % lives
 	level_label.text = "LEVEL  %d" % level
@@ -41,6 +41,7 @@ func update_status(score: int, lives: int, level: int, remaining: int, power_sec
 	power_label.text = "WASD / ARROWS  MOVE     P  PAUSE     F3  AI TRACE"
 	if power_seconds > 0.0:
 		power_label.text += "     SHIELD  %.1fs" % power_seconds
+	power_label.text += "     ADAPT  %+.2f" % adaptive
 	if debug_panel.visible:
 		debug_label.text = "AI STATE\n%s\n\nTARGET\n%s\n\nPATH\n%d tiles\n\nPREDICTION\n%d tiles\n\nDIFFICULTY\n%.1f" % [ai_state, target_name, path_length, prediction, difficulty]
 

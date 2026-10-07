@@ -14,6 +14,11 @@ var audio_manager
 var score := 0
 var lives := 3
 var level := 1
+var difficulty_mod := 0.0
+const DIFF_MOD_MIN := -0.18
+const DIFF_MOD_MAX := 0.18
+const DIFF_STEP_CATCH := 0.04
+const DIFF_STEP_HIT := 0.06
 var game_state := &"playing"
 var death_timer := 0.0
 var level_timer := 0.0
@@ -70,7 +75,7 @@ func _process(delta: float) -> void:
 	if input_direction != Vector2i.ZERO:
 		player.set_movement_input(input_direction)
 	player.move_player(delta, maze)
-	ghost.update_brain(delta, maze, player.tile, player.direction, level)
+	ghost.update_brain(delta, maze, player.tile, player.direction, level, difficulty_mod)
 	if power_timer > 0.0:
 		power_timer = maxf(0.0, power_timer - delta)
 	if game_state == &"playing" and ghost.ai_state != &"RETURN" and player.position.distance_to(ghost.position) < 22.0:
@@ -80,6 +85,7 @@ func _process(delta: float) -> void:
 			score += 200
 			audio_manager.play_effect(&"catch")
 			_spawn_sparks(ghost.position, Color("9cf4ff"), 14)
+			difficulty_mod = clampf(difficulty_mod + DIFF_STEP_CATCH, DIFF_MOD_MIN, DIFF_MOD_MAX)
 		else:
 			_lose_life()
 	_update_hud()
@@ -104,6 +110,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			score = 0
 			lives = 3
 			level = 1
+			difficulty_mod = 0.0
 			_setup_level(false)
 		elif game_state == &"level_clear":
 			level += 1
@@ -175,6 +182,7 @@ func _lose_life() -> void:
 	game_state = &"dying"
 	death_timer = 0.82
 	power_timer = 0.0
+	difficulty_mod = clampf(difficulty_mod - DIFF_STEP_HIT, DIFF_MOD_MIN, DIFF_MOD_MAX)
 	player.direction = Vector2i.ZERO
 	player.queued_direction = Vector2i.ZERO
 	audio_manager.play_effect(&"hit")
@@ -194,7 +202,7 @@ func _update_hud() -> void:
 		target_name = "ESCAPE ROUTE"
 	elif ghost.ai_state == &"RETURN":
 		target_name = "HOME BASE"
-	hud.update_status(score, lives, level, maze.collectibles.size(), power_timer, ghost.ai_state, target_name, ghost.path_length(), ghost.prediction_tiles, 1.0 + float(level - 1) * 0.2)
+	hud.update_status(score, lives, level, maze.collectibles.size(), power_timer, ghost.ai_state, target_name, ghost.path_length(), ghost.prediction_tiles, 1.0 + float(level - 1) * 0.2, difficulty_mod)
 
 
 func _spawn_sparks(at: Vector2, color: Color, count: int) -> void:
